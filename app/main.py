@@ -1,8 +1,12 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
-from app.routes.client import router as router_client
+from app.routes import client, login, account
+
+templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(
     title="Loop Solutions",
@@ -10,27 +14,19 @@ app = FastAPI(
     version="1.0.0",
 )
 
-app.include_router(router_client)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(client.router)
+app.include_router(client.front_router)
+app.include_router(login.router)
+app.include_router(account.router)
 
-@app.get("/")
+@app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
-@app.get("/front", response_class=HTMLResponse)
-async def front_page():
-    html_content = """
-        <html>
-            <head>
-                <title>Loop Solutions</title>
-            </head>
-            <body>
-                <h1>Loop Solutions</h1>
-                <p>Sistema de Gestão de Ordens de Serviço</p>
-                <p>Status: <strong>Operacional </strong></p>
-            </body>
-        </html>
-    """
-    return html_content
+@app.get("/", response_class=HTMLResponse)
+async def front_page(request: Request):
+    return templates.TemplateResponse(request, "index.html", {"titulo": "Loop Solutions CRM", "versao": "1.0.0"})
 
 def start():
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
